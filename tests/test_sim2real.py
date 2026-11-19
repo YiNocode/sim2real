@@ -7,6 +7,7 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 import numpy as np
+from PIL import Image
 
 from sim2real.assets import write_assets
 from sim2real.bundle import sha256
@@ -45,6 +46,93 @@ class ProfileTest(unittest.TestCase):
 
 
 class WebTest(unittest.TestCase):
+    def test_tutorial_draft_publish_and_media(self):
+        with tempfile.TemporaryDirectory() as temp:
+            client = create_app(temp).test_client()
+            saved = client.post('/api/profiles', data={'profile': json.dumps(load(EXAMPLE))})
+            url = f"/api/profiles/{saved.json['id']}/tutorial"
+            self.assertIsNone(client.get(url + '/published').json)
+            draft = {'materials': [{'title': '分电板', 'media': ['upload_0']}],
+                     'tools': [{'title': '烙铁'}],
+                     'steps': [{'title': '准备工位', 'instructions': '检查零件', 'outcome': '零件齐全',
+                                'media': ['upload_1']}]}
+
+            def submit(action, data, **uploads):
+                return client.post(url, data={
+                    'action': action,
+                    'tutorial': (io.BytesIO(json.dumps(data).encode()), 'tutorial.json'),
+                    **uploads,
+                })
+
+            photo = io.BytesIO()
+            Image.new('RGB', (8, 8), 'red').save(photo, format='PNG')
+            photo.seek(0)
+            video = b'\0\0\0\x18ftypmp42' + bytes(24)
+            response = submit('draft', draft, upload_0=(photo, 'part.png'),
+                              upload_1=(io.BytesIO(video), 'demo.mp4'))
+            self.assertEqual(200, response.status_code)
+            self.assertIsNone(client.get(url + '/published').json)
+            draft = response.json['draft']
+            self.assertEqual(200, submit('publish', draft).status_code)
+            self.assertEqual(draft, client.get(url + '/published').json)
+            draft['steps'][0]['title'] = '未发布的修改'
+            self.assertEqual(200, submit('draft', draft).status_code)
+            self.assertEqual('准备工位', client.get(url + '/published').json['steps'][0]['title'])
+            with client.get(url + '/media/' + draft['steps'][0]['media'][0],
+                            headers={'Range': 'bytes=0-11'}) as response:
+                self.assertEqual(206, response.status_code)
+                self.assertEqual('video/mp4', response.mimetype)
+                self.assertEqual(video[:12], response.data)
+            draft['materials'][0]['media'] = []
+            self.assertEqual(400, submit('publish', draft).status_code)
+            self.assertEqual('准备工位', client.get(url + '/published').json['steps'][0]['title'])
+
+    def test_pid_review_and_wiring_examples(self):
+        with tempfile.TemporaryDirectory() as temp:
+            client = create_app(temp).test_client()
+            baseline = b'1\t1\tMC_ROLLRATE_P\t0.15\t9\n1\t1\tMC_PITCHRATE_K\t1\t9\n'
+            saved = client.post('/api/profiles', data={
+                'profile': json.dumps(load(EXAMPLE)),
+                'px4_params': (io.BytesIO(baseline), 'reference.params'),
+            })
+            self.assertEqual(201, saved.status_code)
+            endpoint = f"/api/profiles/{saved.json['id']}"
+            current = b'1 1 MC_ROLLRATE_P 0.16 9\n1 1 MC_YAW_P 2 9\n'
+            comparison = client.post(endpoint + '/pid-compare', data={
+                'current': (io.BytesIO(current), 'current.params'),
+            })
+            self.assertEqual(200, comparison.status_code)
+            self.assertEqual(['missing', 'changed', 'missing'],
+                             [row['status'] for row in comparison.json])
+            invalid = client.post(endpoint + '/pid-compare', data={
+                'current': (io.BytesIO(b'1 1 MC_ROLLRATE_P nan 9'), 'current.params'),
+            })
+            self.assertEqual(400, invalid.status_code)
+
+            path = endpoint + '/wiring'
+            self.assertEqual(400, client.post(path, data={
+                'caption': '分电板', 'image': (io.BytesIO(b'not an image'), 'bad.jpg'),
+            }).status_code)
+            self.assertEqual([], client.get(path).json)
+            photo = io.BytesIO()
+            Image.new('RGB', (32, 24), 'red').save(photo, format='PNG')
+            photo.seek(0)
+            uploaded = client.post(path, data={'caption': '分电板', 'image': (photo, 'reference.png')})
+            self.assertEqual(201, uploaded.status_code)
+            self.assertEqual([uploaded.json], client.get(path).json)
+            with client.get(f"{path}/{uploaded.json['id']}") as response:
+                self.assertEqual('image/jpeg', response.mimetype)
+                with Image.open(io.BytesIO(response.data)) as stored:
+                    self.assertEqual((32, 24), stored.size)
+            image_path = f"{path}/{uploaded.json['id']}"
+            self.assertEqual(403, client.delete(image_path, headers={'Sec-Fetch-Site': 'cross-site'}).status_code)
+            self.assertEqual([uploaded.json], client.get(path).json)
+            self.assertEqual(204, client.delete(image_path).status_code)
+            self.assertEqual([], client.get(path).json)
+            self.assertEqual(404, client.get(image_path).status_code)
+            self.assertEqual(404, client.delete(image_path).status_code)
+            self.assertEqual(404, client.get('/api/profiles/other-r1/wiring').status_code)
+
     def test_save_immutable_version_and_register_ulog_without_mocap(self):
         with tempfile.TemporaryDirectory() as temp:
             client = create_app(temp).test_client()

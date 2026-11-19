@@ -95,6 +95,7 @@ h3 {
 
 .tabs {
   display:flex;
+  flex-wrap:wrap;
   gap:24px;
   border-bottom:1px solid #cbdad4;
   margin:27px 0 22px;
@@ -207,9 +208,68 @@ button:focus-visible,.button:focus-within,a:focus-visible,input:focus-visible,se
 
 .fields label,.rotor label {
   display:grid;
+  align-content:start;
   gap:5px;
   font-size:13px;
   font-weight:600;
+}
+
+.measurement-note {
+  color:var(--muted);
+  font-size:13px;
+  font-weight:400;
+  line-height:1.55;
+}
+
+#wiring-examples {
+  border-top:1px solid #e3ebe7;
+  margin-top:24px;
+  padding-top:16px;
+}
+
+#wiring-examples .heading {
+  flex-wrap:wrap;
+}
+
+#wiring-preview {
+  margin-top:14px;
+}
+
+#pid-result {
+  overflow-x:auto;
+}
+
+.pid-table {
+  width:100%;
+  border-collapse:collapse;
+  text-align:left;
+  font-size:13px;
+}
+
+.pid-table th,.pid-table td {
+  padding:8px;
+  border-bottom:1px solid #e3ebe7;
+}
+
+.wiring-photo {
+  margin:0;
+  overflow-wrap:anywhere;
+}
+
+.wiring-caption {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:8px;
+}
+
+.wiring-photo img {
+  display:block;
+  width:100%;
+  max-height:280px;
+  object-fit:contain;
+  background:#f2f6f4;
 }
 
 .wide {
@@ -394,4 +454,72 @@ summary {
 
 .checkbox input {
   width:auto;
+}
+.tutorial-card,.tutorial-slide-content {
+  border:1px solid #d9e5e0;
+  border-radius:10px;
+  padding:14px;
+  margin:10px 0;
+}
+
+.tutorial-card label {
+  display:grid;
+  gap:5px;
+  margin:12px 0;
+}
+
+.tutorial-row-header,.tutorial-nav,.tutorial-attachments li {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.tutorial-row-header h4 {
+  flex:1;
+  margin:0;
+}
+
+.tutorial-attachments li {
+  margin:5px 0;
+  overflow-wrap:anywhere;
+}
+
+.tutorial-nav {
+  margin:14px 0;
+}
+
+.tutorial-nav [aria-current=step] {
+  color:#fff;
+  background:var(--accent);
+}
+
+.tutorial-gallery {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));
+  gap:12px;
+}
+
+.tutorial-gallery img,.tutorial-gallery video {
+  display:block;
+  width:100%;
+  max-height:420px;
+  object-fit:contain;
+  background:#edf3f0;
+}
+
+.tutorial-text {
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+
+@media (prefers-reduced-motion:no-preference) {
+  .tutorial-slide-content {
+    animation:tutorial-enter 180ms ease-out;
+  }
+}
+
+@keyframes tutorial-enter {
+  from { opacity:0; transform:translateY(5px); }
+  to { opacity:1; transform:translateY(0); }
 }

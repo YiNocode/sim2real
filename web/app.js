@@ -1,3 +1,5 @@
+import { setupTutorial } from './tutorial.js';
+
 const $ = id => document.getElementById(id);
 const sources = {vio:'视觉惯性里程计（VIO）', flow_range:'光流 + 测距', gnss:'GNSS', rtk:'RTK', external:'其他外部定位', none:'暂无位置估计'};
 const scenarios = {hover:'悬停', 'step-x':'X 轴阶跃', 'step-y':'Y 轴阶跃', 'step-z':'Z 轴阶跃', trajectory:'轨迹跟踪'};
@@ -14,14 +16,32 @@ const sections = [
     ['battery.voltage_window_v','验收电压范围（V，最低 / 最高）','vector'], ['localization.source','PX4 定位来源',sources],
   ]],
   ['动力学与定位细节', [
-    ['geometry.com_flu_m','质心 XYZ（m）','vector'], ['geometry.inertia_kg_m2','主轴惯量 XYZ（kg·m²）','vector'],
-    ['propulsion.thrust_coefficient','推力系数（N/(rad/s)²）','number'],
-    ['propulsion.torque_coefficient','力矩系数（N·m/(rad/s)²）','number'],
-    ['propulsion.max_rad_s','最大角速度（rad/s）','number'], ['propulsion.rise_s','电机加速时间常数（s）','number'],
-    ['propulsion.fall_s','电机减速时间常数（s）','number'], ['localization.mounting_xyz_flu_m','定位安装 XYZ（m）','vector'],
-    ['localization.mounting_rpy_rad','定位安装 RPY（rad）','vector'], ['localization.rate_hz','定位更新率（Hz）','number'],
-    ['localization.delay_s','定位延迟（s）','number'], ['localization.position_noise_std_m','位置噪声标准差（m）','number'],
-    ['localization.velocity_noise_std_mps','速度噪声标准差（m/s）','number'],
+    ['geometry.com_flu_m','质心 XYZ（m）','vector',
+      '实飞装配断电后，从机架侧面和正面分别记录两种悬挂姿态下的铅垂线，用交点确定质心。相对旋翼坐标所用原点填写 X 前、Y 左、Z 上的有符号距离。'],
+    ['geometry.inertia_kg_m2','机体轴惯量 XYZ（kg·m²）','vector',
+      '双线摆：分别让通过质心的 X、Y、Z 轴竖直，记录多周期小角度摆动并求平均周期 T。两线等长 L、上下间距同为 d 时，I = m g d² T² / (16π² L)，扣除夹具惯量。也可用 CAD 按实际装配质量估算。'],
+    ['propulsion.thrust_coefficient','推力系数（N/(rad/s)²）','number',
+      '用带防护的单旋翼测力台，按实际电机、桨和电压记录多组稳态推力 F 与转速 ω。传感器去皮后，按 F = kω² 拟合 k。转速用 RPM × 2π/60 转成 rad/s。'],
+    ['propulsion.torque_coefficient','力矩系数（N·m/(rad/s)²）','number',
+      '用带扭矩测量的旋翼台架读取各稳态转速的反扭矩绝对值 Q，按 Q = kω² 拟合 k。若用力臂测力，Q = 力 × 垂直力臂。'],
+    ['propulsion.max_rad_s','最大角速度（rad/s）','number',
+      '台架在记录的工作电压下，使用实装桨和电调，在允许的最大输出读取稳定负载转速。用机械 RPM × 2π/60 换算，记录对应电压。'],
+    ['propulsion.rise_s','电机加速时间常数（s）','number',
+      '在防护台架给较低到较高的转速指令阶跃，记录同步转速。扣除起始纯延迟，读取转速完成全变化量 63.2% 的时间，多次取中位数。'],
+    ['propulsion.fall_s','电机减速时间常数（s）','number',
+      '在相同台架给较高到较低的转速指令阶跃，扣除起始纯延迟，读取转速下降了全变化量 63.2% 的时间，多次取中位数。'],
+    ['localization.mounting_xyz_flu_m','定位安装 XYZ（m）','vector',
+      '用卡尺或装配图测机体原点到 VIO 标定参考点或光流镜头中心的位移，按 X 前、Y 左、Z 上记正负。测距器单独安装时，在来源备注记录它的偏移。'],
+    ['localization.mounting_rpy_rad','定位安装 RPY（rad）','vector',
+      '从外参标定或装配图读取传感器到机体 FLU 的旋转，按右手系写成 Roll、Pitch、Yaw（R = Rz·Ry·Rx）。用角尺核对安装方向，角度乘 π/180 转为弧度。'],
+    ['localization.rate_hz','定位更新率（Hz）','number',
+      '在机载端记录策略实际收到的有效 PX4 融合本地位置消息，按接收时间计算相邻间隔，取中位数的倒数。仅有 ULog 时，先核对日志是否降采样，并注明测量点。'],
+    ['localization.delay_s','定位延迟（s）','number',
+      '用标尺和已同步的视频记录离散往返位移，对齐机载接收时间，对比参考与 PX4 估计的同轴速度峰值或互相关，取多次滞后的中位数。仅有采样与接收时间差时，注明它是链路近似。'],
+    ['localization.position_noise_std_m','位置噪声标准差（m）','number',
+      '在代表性照明、纹理和高度下采集有效融合位置。对齐独立参考后计算三轴误差标准差，填三轴最大值并保留各轴结果。只有静置记录时，计算去均值后的短时波动，另记漂移。'],
+    ['localization.velocity_noise_std_mps','速度噪声标准差（m/s）','number',
+      '采集有效的 PX4 融合速度。静置时以零速度为参考；有同步独立参考时，计算同坐标系下各轴速度残差的标准差。填三轴最大值并保留各轴结果。'],
   ]],
 ];
 const groups = {geometry:'几何与质量',hardware:'硬件',battery:'电池',propulsion:'推进',localization:'定位'};
@@ -42,8 +62,9 @@ function options(select, choices) {
   select.replaceChildren(...Object.entries(choices).map(([value, label]) => new Option(label, value)));
 }
 
-function field(name, title, type) {
-  const label = element('label', title);
+function field(name, title, type, measurement) {
+  const label = element('label');
+  const caption = element('span', title);
   const input = element(typeof type === 'object' ? 'select' : 'input');
   input.required = true;
   input.name = name;
@@ -53,7 +74,15 @@ function field(name, title, type) {
     if (type === 'number') input.step = 'any';
     if (type === 'vector') input.placeholder = '用逗号分隔';
   }
-  label.append(input);
+  label.append(caption, input);
+  if (measurement) {
+    const note = element('span', '测量方法 · ' + measurement, 'measurement-note');
+    caption.id = `caption-${name}`;
+    note.id = `measurement-${name}`;
+    input.setAttribute('aria-labelledby', caption.id);
+    input.setAttribute('aria-describedby', note.id);
+    label.append(note);
+  }
   return label;
 }
 
@@ -62,6 +91,9 @@ function setupForm() {
   for (const [index, [title, entries]] of sections.entries()) {
     const group = element(index === 2 ? 'details' : 'fieldset');
     group.append(element(index === 2 ? 'summary' : 'legend', title));
+    if (index === 2) {
+      group.append(element('p', '无动捕可用同步视频与标尺作独立参考。没有台架或独立参考时，可按同配置规格或短时日志估算；在「参数来源与 PX4 快照」中标为估计，并注明涉及的字段、依据和测量工况。', 'field-note'));
+    }
     const fields = element('div', '', 'fields');
     fields.append(...entries.map(entry => field(...entry)));
     group.append(fields);
@@ -182,6 +214,11 @@ function renderProfiles() {
   const current = $('flight-profile').value;
   $('flight-profile').replaceChildren(new Option('请选择机型版本',''), ...profiles.map(item => new Option(profileKey(item),profileKey(item))));
   if (current) $('flight-profile').value = current;
+  const workshop = $('workshop-profile');
+  const selected = workshop.value;
+  workshop.replaceChildren(...Array.from($('flight-profile').options, option => option.cloneNode(true)));
+  workshop.value = selected;
+  tutorial.setProfiles(profiles.map(profileKey));
   $('save-flight').disabled = !profiles.length;
   const list = $('profile-list');
   list.replaceChildren();
@@ -235,14 +272,179 @@ async function refreshFlights() {
   if (!records.length) list.append(element('p','暂无飞行日志。','empty'));
 }
 
-for (const tab of ['aircraft','flights']) $('tab-'+tab).addEventListener('click',() => {
-  for (const item of ['aircraft','flights']) {
+const tabs = ['aircraft','flights','workshop','tutorial-edit','tutorial-view'];
+for (const tab of tabs) $('tab-'+tab).addEventListener('click',() => {
+  for (const item of tabs) {
     $('tab-'+item).setAttribute('aria-selected',String(item === tab));
     $(item).hidden = item !== tab;
   }
   $('notice').hidden = true;
+  if (tab === 'tutorial-view') tutorial.refreshPlayer();
+  else tutorial.pause();
 });
 
+const workshopProfile = $('workshop-profile');
+const pidForm = $('pid-form');
+const wiringForm = $('wiring-form');
+const addWiring = $('add-wiring');
+const wiringPreview = $('wiring-preview');
+const wiringPreviewImage = wiringPreview.querySelector('img');
+let wiringRequest = 0;
+let wiringPreviewUrl;
+
+function clearWiringPreview() {
+  if (wiringPreviewUrl) URL.revokeObjectURL(wiringPreviewUrl);
+  wiringPreviewUrl = undefined;
+  wiringPreviewImage.removeAttribute('src');
+  wiringPreview.hidden = true;
+}
+
+function closeWiringForm() {
+  wiringForm.reset();
+  wiringForm.elements.image.setCustomValidity('');
+  clearWiringPreview();
+  wiringForm.hidden = true;
+  addWiring.setAttribute('aria-expanded','false');
+}
+
+addWiring.addEventListener('click',() => {
+  wiringForm.hidden = false;
+  addWiring.setAttribute('aria-expanded','true');
+  wiringForm.elements.caption.focus();
+});
+
+$('cancel-wiring').addEventListener('click',() => {
+  closeWiringForm();
+  addWiring.focus();
+});
+
+wiringForm.elements.image.addEventListener('change',() => {
+  const input = wiringForm.elements.image;
+  const [file] = input.files;
+  clearWiringPreview();
+  input.setCustomValidity('');
+  if (!file) return;
+  if (file.size > 10 * 1024 ** 2) {
+    input.setCustomValidity('参考图片不能超过 10 MiB。');
+    input.reportValidity();
+    return;
+  }
+  wiringPreviewUrl = URL.createObjectURL(file);
+  wiringPreviewImage.src = wiringPreviewUrl;
+  wiringPreview.hidden = false;
+});
+
+wiringPreviewImage.addEventListener('error',() => {
+  if (!wiringPreviewUrl) return;
+  clearWiringPreview();
+  wiringForm.elements.image.setCustomValidity('无法预览，请选择有效的 JPG 或 PNG 图片。');
+  wiringForm.elements.image.reportValidity();
+});
+
+async function refreshWiring() {
+  const identifier = workshopProfile.value;
+  const request = ++wiringRequest;
+  const list = $('wiring-list');
+  list.replaceChildren();
+  if (!identifier) return;
+  const endpoint = `profiles/${identifier}/wiring`;
+  const records = await api(endpoint);
+  if (request !== wiringRequest) return;
+  for (const record of records) {
+    const photo = element('figure','','wiring-photo');
+    const link = element('a');
+    link.href = `/api/${endpoint}/${record.id}`;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    const image = element('img');
+    image.src = link.href;
+    image.alt = record.caption;
+    image.loading = 'lazy';
+    link.append(image);
+    const caption = element('figcaption',record.caption,'wiring-caption');
+    const remove = element('button','删除','secondary');
+    remove.type = 'button';
+    remove.setAttribute('aria-label',`删除焊接示例：${record.caption}`);
+    remove.addEventListener('click',async () => {
+      if (!window.confirm(`确定删除 ${identifier} 的焊接示例「${record.caption}」及其参考图片？`)) return;
+      remove.disabled = true;
+      try {
+        const response = await fetch(link.href, {method:'DELETE'});
+        if (!response.ok && response.status !== 404) throw new Error('删除失败，请重试。');
+        if (workshopProfile.value === identifier) await refreshWiring();
+        notice(response.ok ? '已删除焊接示例。' : '这条焊接示例已不存在。');
+      } catch (error) { notice(error.message,true); }
+      finally { remove.disabled = false; }
+    });
+    caption.append(remove);
+    photo.append(link,caption);
+    list.append(photo);
+  }
+  if (!records.length) list.append(element('p','这个版本还没有参考照片。','field-note'));
+}
+
+workshopProfile.addEventListener('change',async () => {
+  $('workshop-tools').hidden = !workshopProfile.value;
+  $('workshop-empty').hidden = Boolean(workshopProfile.value);
+  $('pid-result').replaceChildren();
+  pidForm.reset();
+  addWiring.disabled = !workshopProfile.value;
+  $('wiring-select-help').hidden = Boolean(workshopProfile.value);
+  closeWiringForm();
+  try { await refreshWiring(); }
+  catch (error) { notice(error.message,true); }
+});
+
+pidForm.addEventListener('submit',async event => {
+  event.preventDefault();
+  const identifier = workshopProfile.value;
+  const result = $('pid-result');
+  const button = event.submitter;
+  result.replaceChildren();
+  button.disabled = true;
+  try {
+    const rows = await api(`profiles/${identifier}/pid-compare`,new FormData(pidForm));
+    if (workshopProfile.value !== identifier) return;
+    const changed = rows.filter(row => row.status === 'changed').length;
+    const missing = rows.filter(row => row.status === 'missing').length;
+    const table = element('table','','pid-table');
+    const headings = table.createTHead().insertRow();
+    for (const title of ['参数','参考值','当前值','状态']) {
+      const heading = element('th',title);
+      heading.scope = 'col';
+      headings.append(heading);
+    }
+    const body = table.createTBody();
+    const labels = {same:'一致',changed:'不同',missing:'文件中缺项'};
+    for (const row of rows) {
+      const line = body.insertRow();
+      for (const value of [row.name,row.baseline ?? '—',row.current ?? '—',labels[row.status]]) {
+        line.insertCell().textContent = value;
+      }
+    }
+    result.append(element('p',`共 ${rows.length} 项，${changed} 项不同，${missing} 项缺失。`),table);
+  } catch (error) { notice(error.message,true); }
+  finally { button.disabled = false; }
+});
+
+wiringForm.addEventListener('submit',async event => {
+  event.preventDefault();
+  const identifier = workshopProfile.value;
+  const button = event.submitter;
+  button.disabled = true;
+  try {
+    await api(`profiles/${identifier}/wiring`,new FormData(wiringForm));
+    if (workshopProfile.value === identifier) {
+      closeWiringForm();
+      addWiring.focus();
+      await refreshWiring();
+    }
+    notice(`已上传 ${identifier} 的焊接示例。`);
+  } catch (error) { notice(error.message,true); }
+  finally { button.disabled = false; }
+});
+
+const tutorial = setupTutorial({$, element, api});
 setupForm();
 options($('flight-source'),Object.fromEntries(Object.entries(sources).filter(([key])=>key !== 'none')));
 $('flight-profile').addEventListener('change',pickSource);
