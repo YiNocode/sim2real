@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sim2Real · 飞行实验工作台</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script type="module" src="/static/app.js"></script>
+</head>
+<body>
+  <header class="top"><div class="shell"><a href="/" class="brand"><span aria-hidden="true" class="mark">✣</span> Sim2Real</a><span class="lab">飞行实验工作台</span></div></header>
+  <main class="shell">
+    <h1>飞行实验资料</h1>
+    <p class="intro">保存机型版本，为每次试飞上传日志并关联对应配置。</p>
+    <div class="tabs" role="tablist" aria-label="实验资料">
+      <button role="tab" aria-selected="true" aria-controls="aircraft" id="tab-aircraft">机型档案 <span id="profile-count"></span></button>
+      <button role="tab" aria-selected="false" aria-controls="flights" id="tab-flights">飞行日志 <span id="flight-count"></span></button>
+    </div>
+    <p id="notice" role="status" hidden></p>
+    <section id="aircraft" role="tabpanel" aria-labelledby="tab-aircraft" class="layout">
+      <form id="profile-form" class="panel">
+        <div class="heading"><h2>录入机型</h2><div class="inline"><button type="button" id="load-example" class="secondary">载入示例</button><label class="secondary button">导入 YAML<input type="file" accept=".yaml,.yml" id="import-yaml" class="visually-hidden"></label></div></div>
+        <div id="profile-fields"></div>
+        <div class="footer"><span id="profile-state"></span><label class="checkbox"><input type="checkbox" name="example">示例机型</label><button>保存机型版本</button></div>
+      </form>
+      <aside class="panel records"><h2>已保存机型</h2><div id="profile-list"></div></aside>
+    </section>
+    <section id="flights" role="tabpanel" aria-labelledby="tab-flights" class="layout" hidden>
+      <form id="flight-form" class="panel">
+        <h2>登记试飞</h2>
+        <div class="fields">
+          <label>机型版本<select name="profile" id="flight-profile" required></select></label>
+          <label>本次定位来源<select name="source" id="flight-source" required></select></label>
+          <label>试飞科目<select name="scenario" required><option value="hover">悬停</option><option value="step-x">X 轴速度阶跃</option><option value="step-y">Y 轴速度阶跃</option><option value="step-z">Z 轴速度阶跃</option><option value="trajectory">轨迹跟踪</option></select></label>
+          <label>日志用途<select name="purpose" required><option value="fit">标定</option><option value="validation">独立验收</option></select></label>
+          <label>起飞电压（V）<input name="voltage_v" type="number" step="any" min="0.01" required></label>
+          <label>PX4 ULog<input type="file" name="ulog" accept=".ulg" required></label>
+          <label>机载指令 CSV（可选）<input type="file" name="commands" accept=".csv"></label>
+          <label>独立参考轨迹 CSV（可选）<input type="file" name="reference" accept=".csv"></label>
+          <p class="field-note wide">VIO 和光流都可以登记。没有独立参考轨迹时，使用 PX4 估计进行闭环对比。</p>
+          <label class="wide">试飞备注<textarea name="notes" rows="3" maxlength="1500" placeholder="记录载荷、场地、定位异常或人工接管情况"></textarea></label>
+        </div>
+        <div class="footer"><button id="save-flight">上传飞行日志</button></div>
+      </form>
+      <aside class="panel records"><h2>已登记试飞</h2><div id="flight-list"></div></aside>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,15 @@
+__pycache__/
+.venv/
+workspace/
+build/
+*.pyc
+
+.env
+.env.*
+*.ulg
+*.params
+*.param
+*.pt
+*.pth
+*.ts.pt
+*.torchscript
