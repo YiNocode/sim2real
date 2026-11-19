@@ -2,7 +2,7 @@ const groups = {materials:'制作材料', tools:'所需工具', steps:'装配步
 const imageTypes = '.jpg,.jpeg,.png';
 const videoTypes = '.mp4,.webm';
 
-export function setupTutorial({$, element, api}) {
+export function setupTutorial({$, element, api, mediaUrl, local = false}) {
   const editor = $('tutorial-editor');
   const editSelect = $('tutorial-edit-profile');
   const viewSelect = $('tutorial-view-profile');
@@ -16,7 +16,7 @@ export function setupTutorial({$, element, api}) {
   let viewRequest = 0;
 
   const endpoint = id => `profiles/${id}/tutorial`;
-  const url = (id, name) => `/api/${endpoint(id)}/media/${name}`;
+  const url = mediaUrl ?? ((id, name) => `/api/${endpoint(id)}/media/${name}`);
   const pause = () => slide.querySelectorAll('video').forEach(video => video.pause());
 
   function button(text, onClick) {
@@ -168,7 +168,8 @@ export function setupTutorial({$, element, api}) {
       if (request !== editRequest) return;
       showDraft(state.draft);
       editor.hidden = false;
-      status.textContent = state.published ? '已有发布版本，可继续编辑草稿。' : '填写内容后可保存草稿或发布。';
+      status.textContent = local ? '填写内容后可保存草稿或生成预览。'
+        : state.published ? '已有发布版本，可继续编辑草稿。' : '填写内容后可保存草稿或发布。';
     } catch (error) { if (request === editRequest) status.textContent = error.message; }
   });
 
@@ -189,7 +190,7 @@ export function setupTutorial({$, element, api}) {
     try {
       const state = await api(endpoint(id),body.form);
       showDraft(state.draft);
-      status.textContent = action === 'publish' ? '已发布，可在「教程演示」中查看。' : '草稿已保存。';
+      status.textContent = action === 'publish' ? (local ? '预览已更新。' : '已发布，可在「教程演示」中查看。') : '草稿已保存。';
     } catch (error) { status.textContent = error.message; }
     finally { controls.forEach(control => { control.disabled = false; }); }
   });
@@ -237,13 +238,13 @@ export function setupTutorial({$, element, api}) {
     const status = $('tutorial-view-status');
     pause();
     player.hidden = true;
-    status.textContent = id ? '正在读取已发布教程…' : '请选择一个已保存的机型版本。';
+    status.textContent = id ? '正在读取教程…' : '请选择一个已保存的机型版本。';
     if (!id) return;
     try {
       const content = await api(`${endpoint(id)}/published`);
       if (request !== viewRequest) return;
       published = content;
-      if (!published) { status.textContent = '该机型版本尚未发布教程。'; return; }
+      if (!published) { status.textContent = local ? '请先在编写页生成预览。' : '该机型版本尚未发布教程。'; return; }
       const titles = ['安装前准备',...published.steps.map((_,index) => `第 ${index + 1} 步`)];
       nav.replaceChildren(...titles.map((title,index) => button(title,() => showSlide(index,true))));
       status.textContent = `共 ${published.steps.length} 个装配步骤`;

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sim2Real · 装配教程编写器</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./editor.js"></script>
+</head>
+<body>
+  <header class="top"><div class="shell"><span class="brand">Sim2Real</span></div></header>
+  <main class="shell">
+    <h1>装配教程编写器</h1>
+    <p class="intro">草稿和附件保存在当前浏览器。保存后可导出教程包，发给合作者继续编辑。</p>
+    <div class="panel">
+      <div class="fields">
+        <label>机型与版本<input id="model" maxlength="120" placeholder="例如：实验室四旋翼 r1"></label>
+        <label>打开教程包<input id="import" type="file" accept=".s2rtutorial"></label>
+      </div>
+      <div class="footer"><button id="export" type="button" class="secondary">导出已保存教程</button></div>
+      <p id="storage-status" class="field-note" role="status"></p>
+    </div>
+    <div class="tabs" role="tablist" aria-label="教程">
+      <button id="edit-tab" type="button" role="tab" aria-controls="tutorial-edit" aria-selected="true">教程编写</button>
+      <button id="view-tab" type="button" role="tab" aria-controls="tutorial-view" aria-selected="false">教程预览</button>
+    </div>
+    <section id="tutorial-edit" role="tabpanel" aria-labelledby="edit-tab" class="panel">
+      <select id="tutorial-edit-profile" hidden aria-label="当前草稿"></select>
+      <p id="tutorial-edit-status" class="field-note" role="status"></p>
+      <form id="tutorial-editor" hidden>
+        <p class="field-note">图片支持 JPG / PNG（10 MiB），视频支持 MP4 / WebM（100 MiB）。</p>
+        <div id="tutorial-edit-rows"></div>
+        <div class="footer">
+          <button name="action" value="draft" class="secondary">保存草稿</button>
+          <button name="action" value="publish">保存并生成预览</button>
+        </div>
+      </form>
+    </section>
+    <section id="tutorial-view" role="tabpanel" aria-labelledby="view-tab" class="panel" hidden>
+      <select id="tutorial-view-profile" hidden aria-label="当前教程"></select>
+      <p id="tutorial-view-status" class="field-note" role="status"></p>
+      <div id="tutorial-player" hidden>
+        <nav id="tutorial-step-nav" class="tutorial-nav" aria-label="教程步骤"></nav>
+        <article id="tutorial-slide" tabindex="-1"></article>
+        <div class="footer">
+          <button id="tutorial-prev" type="button" class="secondary">上一步</button>
+          <button id="tutorial-next" type="button">下一步</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
