@@ -57,7 +57,11 @@ export function setupTutorial({$, element, api, mediaUrl, local = false}) {
         renumber(group);
       }));
     }
-    header.append(button('移除',() => { card.remove(); renumber(group); }));
+    header.append(button('移除',() => {
+      clearAttachmentPreviews();
+      card.remove();
+      renumber(group);
+    }));
     card.append(header);
     function field(name, label, limit, multiline = false) {
       const holder = element('label',label);
@@ -82,19 +86,23 @@ export function setupTutorial({$, element, api, mediaUrl, local = false}) {
     label.append(files);
     const attachments = element('ul','','tutorial-attachments');
     const media = [...(row.media ?? [])];
+    const previewUrls = [];
+    function clearAttachmentPreviews() {
+      previewUrls.forEach(source => URL.revokeObjectURL(source));
+      previewUrls.length = 0;
+    }
+    card.clearAttachmentPreviews = clearAttachmentPreviews;
     function showAttachments() {
+      clearAttachmentPreviews();
       attachments.replaceChildren();
       for (const attachment of media) {
-        const name = typeof attachment === 'string' ? '已保存附件' : attachment.name;
+        const saved = typeof attachment === 'string';
+        const name = saved ? attachment : attachment.name;
+        const source = saved ? url(editSelect.value,attachment) : URL.createObjectURL(attachment);
+        if (!saved) previewUrls.push(source);
         const item = element('li');
-        if (typeof attachment === 'string') {
-          const link = element('a',name);
-          link.href = url(editSelect.value,attachment);
-          link.target = '_blank';
-          link.rel = 'noopener';
-          item.append(link);
-        } else item.append(element('span',name));
-        item.append(button('移除附件',() => {
+        const title = card.querySelector('[name=title]').value.trim() || '附件预览';
+        item.append(mediaNode(name,source,title),button('移除附件',() => {
           media.splice(media.indexOf(attachment),1);
           showAttachments();
         }));
@@ -151,6 +159,7 @@ export function setupTutorial({$, element, api, mediaUrl, local = false}) {
 
   function showDraft(draft) {
     for (const key of Object.keys(groups)) {
+      Array.from(lists[key].children).forEach(row => row.clearAttachmentPreviews());
       lists[key].replaceChildren();
       for (const row of draft[key]) addRow(key,row);
     }
