@@ -2,16 +2,16 @@
 
 `main` 是项目的集成分支。合作者在自己的电脑上开发机型档案和飞行日志工作台，从 `main` 新建分支，测试后提交 Pull Request（PR）。仓库维护者审核、决定是否合并，并负责把合并后的代码部署到实验室服务器。
 
-## 获取访问权限
+## Fork 并克隆仓库
 
-维护者在私有仓库的 **Settings → Collaborators → Add people** 中按 GitHub 用户名邀请合作者。合作者接受邀请后，在自己的电脑上克隆仓库。GitHub 仓库权限和实验室服务器的 SSH 权限由维护者分别配置。
+打开 [YiNocode/sim2real](https://github.com/YiNocode/sim2real)，登录 GitHub 后点击 **Fork**，在自己的账号下创建副本。下面的命令中，把 `YOUR_GITHUB_USERNAME` 换成自己的 GitHub 用户名。实验室服务器的 SSH 权限由维护者单独配置。
 
 ```bash
-git clone https://github.com/YiNocode/sim2real.git
+git clone https://github.com/YOUR_GITHUB_USERNAME/sim2real.git
 cd sim2real
-git switch main
-git pull --ff-only origin main
-git switch -c feature/workbench-profile-form
+git remote add upstream https://github.com/YiNocode/sim2real.git
+git fetch upstream
+git switch --no-track -c feature/workbench-profile-form upstream/main
 ```
 
 每项独立修改从最新的 `main` 创建一个分支。分支名示例 `feature/workbench-profile-form`、`fix/flight-upload-validation`。
@@ -58,8 +58,8 @@ python3 -m venv .venv
    git push -u origin feature/workbench-profile-form
    ```
 
-4. 在 GitHub 创建 PR，目标分支（base）选 `main`，来源分支（compare）选自己的分支，请维护者审核。正文写明修改目的、验证命令和结果、手动复现步骤。页面改动可附脱敏截图。涉及字段或存储格式时，说明已有档案与日志如何读取。
-5. 根据审核意见，在同一分支提交并推送更新。需要同步主分支时，在自己的分支运行 `git fetch origin` 和 `git merge origin/main`，解决冲突、复测后推送。已有 PR 会随分支更新。
+4. 在 GitHub 创建 PR，目标仓库和分支选 `YiNocode/sim2real:main`，来源选自己 Fork 中的功能分支，请维护者审核。正文写明修改目的、验证命令和结果、手动复现步骤。页面改动可附脱敏截图。涉及字段或存储格式时，说明已有档案与日志如何读取。
+5. 根据审核意见，在同一分支提交并推送更新。需要同步主分支时，在自己的分支运行 `git fetch upstream` 和 `git merge upstream/main`，解决冲突、复测后推送。已有 PR 会随分支更新。
 
 ## 维护者审核、合并和部署
 
