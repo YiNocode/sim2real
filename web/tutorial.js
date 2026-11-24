@@ -78,12 +78,6 @@ export function setupTutorial({$, element, api, mediaUrl, local = false}) {
       field('instructions','详细操作步骤',6000,true);
       field('outcome','完成后的结果或检查标准',3000,true);
     }
-    const label = element('label',step ? '图片和视频（最多 8 个）' : '对应图片');
-    const files = element('input');
-    files.type = 'file';
-    files.accept = step ? `${imageTypes},${videoTypes}` : imageTypes;
-    files.multiple = step;
-    label.append(files);
     const attachments = element('ul','','tutorial-attachments');
     const media = [...(row.media ?? [])];
     const previewUrls = [];
@@ -102,29 +96,49 @@ export function setupTutorial({$, element, api, mediaUrl, local = false}) {
         if (!saved) previewUrls.push(source);
         const item = element('li');
         const title = card.querySelector('[name=title]').value.trim() || '附件预览';
-        item.append(mediaNode(name,source,title),button('移除附件',() => {
+        const preview = mediaNode(name,source,title);
+        if (preview.tagName === 'VIDEO') {
+          const message = element('p','无法播放此视频。请尝试 MP4（H.264）或 WebM（VP8 / VP9）。','field-note');
+          message.hidden = true;
+          preview.addEventListener('error',() => { message.hidden = false; });
+          item.append(preview,message);
+        } else item.append(preview);
+        item.append(button('移除附件',() => {
           media.splice(media.indexOf(attachment),1);
           showAttachments();
         }));
         attachments.append(item);
       }
     }
-    files.addEventListener('change',() => {
-      const selected = Array.from(files.files);
-      files.value = '';
-      const limit = step ? 8 : 1;
-      if (!selected.length) return;
-      const oversized = selected.some(file => file.size > (/\.(mp4|webm)$/i.test(file.name) ? 100 : 10) * 1024 ** 2);
-      if (oversized || (step && media.length + selected.length > limit)) {
-        $('tutorial-edit-status').textContent = oversized ? '附件太大，请检查图片和视频的大小限制。' : '此步骤最多添加 8 个附件。';
-        return;
-      }
-      if (!step) media.length = 0;
-      media.push(...selected);
-      $('tutorial-edit-status').textContent = '附件已选中，请保存草稿或发布。';
-      showAttachments();
-    });
-    card.append(label,attachments);
+    function addFiles(labelText, accept, maxMiB) {
+      const label = element('label',labelText);
+      const files = element('input');
+      files.type = 'file';
+      files.accept = accept;
+      files.multiple = step;
+      label.append(files);
+      card.append(label);
+      files.addEventListener('change',() => {
+        const selected = Array.from(files.files);
+        files.value = '';
+        const limit = step ? 8 : 1;
+        if (!selected.length) return;
+        const valid = selected.every(file => accept.split(',').some(suffix => file.name.toLowerCase().endsWith(suffix)));
+        const oversized = selected.some(file => file.size > maxMiB * 1024 ** 2);
+        if (!valid || oversized || (step && media.length + selected.length > limit)) {
+          $('tutorial-edit-status').textContent = !valid ? '请选择此栏支持的文件格式。'
+            : oversized ? `单个附件不能超过 ${maxMiB} MiB。` : '每步的图片和视频合计最多 8 个附件。';
+          return;
+        }
+        if (!step) media.length = 0;
+        media.push(...selected);
+        $('tutorial-edit-status').textContent = '附件已选中，可直接预览。请保存草稿以保留附件。';
+        showAttachments();
+      });
+    }
+    addFiles(step ? '上传步骤图片' : '对应图片',imageTypes,10);
+    if (step) addFiles('上传步骤视频（MP4 / WebM，单个最多 100 MiB）',videoTypes,100);
+    card.append(attachments);
     card.tutorialData = body => {
       const data = Object.fromEntries(Array.from(card.querySelectorAll('[name]'), input => [input.name,input.value]));
       data.media = media.map(attachment => {
